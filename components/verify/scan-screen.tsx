@@ -41,7 +41,7 @@ export function ScanScreen({ onResult, existingApplications = [] }: { onResult: 
   useEffect(() => { if (status !== 'running') return; const timers = [750, 1500, 2250].map((ms, i) => window.setTimeout(() => setScanStep(i + 1), ms)); const done = window.setTimeout(() => file && onResult(createApplication(file.name, image, institution, institutionType, applicationId, category)), 3000); return () => [...timers, done].forEach(clearTimeout) }, [status, file, image, institution, institutionType, applicationId, category, onResult])
 
   const chooseExisting = (id: string) => { const app = existingApplications.find((item) => item.id === id); if (!app) return; setApplicationId(app.id); setInstitution(app.college); setInstitutionType(app.program.includes('Polytechnic') ? 'Polytechnic' : 'Engineering College') }
-  const beginValidation = async (next: File | undefined) => { if (!next) return; setFile(next); setImage(await readImage(next)); setValidation(null); setStage('verification'); setStatus('running'); setScanStep(0) }
+  const beginValidation = async (next: File | undefined) => { if (!next) return; setFile(next); setImage(await readImage(next)); setStage('verification'); setStatus('running'); setScanStep(0) }
   const continueDetails = () => { if (!institution.trim() || !institutionType) { setError('Institution name and institution type are required.'); return } setError(''); setStage('upload') }
   const openPicker = (picker: HTMLInputElement | null) => picker?.click()
 
