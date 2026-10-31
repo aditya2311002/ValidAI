@@ -71,8 +71,12 @@ export function AppShell() {
   } else if (screen.name === 'scan') {
     content = (
       <ScanScreen
+        existingApplications={apps}
         onResult={(app) => {
-          setApps((prev) => [app, ...prev])
+          setApps((prev) => {
+            const existing = prev.some((item) => item.id === app.id)
+            return existing ? prev.map((item) => item.id === app.id ? { ...item, documents: [...item.documents, ...app.documents] } : item) : [app, ...prev]
+          })
           setScreen({ name: 'report', id: app.id })
         }}
       />
