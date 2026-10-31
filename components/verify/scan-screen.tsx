@@ -1,34 +1,20 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, ArrowLeft, Camera, Check, FileText, ImageUp, Loader2, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Camera, FileText, ImageUp, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Application } from '@/lib/types'
 import { PipelineProgress } from './pipeline-progress'
 import { ScreenHeader } from './ui-bits'
 
-type ValidationState = 'checking' | 'success' | 'invalid' | 'quality' | 'uncertain' | null
-type Stage = 'intro' | 'details' | 'upload' | 'validation' | 'verification'
+type Stage = 'intro' | 'details' | 'upload' | 'verification'
 
-const validationSteps = ['Checking file format', 'Detecting document content', 'Assessing document quality', 'Checking document relevance']
 const categories = ['AICTE Approval Letter', 'Faculty Details', 'Infrastructure Details', 'Compliance Report', 'Other Supporting Documents']
 const types = ['Engineering College', 'Polytechnic', 'Technical University', 'Management Institution', 'Other Technical Institution']
 
 async function readImage(file: File) {
   if (!file.type.startsWith('image/')) return null
   return await new Promise<string | null>((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => resolve(null); reader.readAsDataURL(file) })
-}
-
-function classifyUpload(file: File) {
-  const name = file.name.toLowerCase()
-  const supported = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type) || file.type.startsWith('image/')
-  if (!supported) return 'invalid' as const
-  if (/selfie|portrait|landscape|random|screenshot|wallpaper|vacation|photo|people|animal/i.test(name)) return 'invalid' as const
-  if (/uncertain|unknown|mystery/i.test(name)) return 'uncertain' as const
-  if (/blurry|blur|dark|cropped|unclear|low[- ]?quality/i.test(name) || (file.type.startsWith('image/') && file.size < 12000)) return 'quality' as const
-  const institutionalName = /aicte|approval|eoa|loa|faculty|infrastructure|compliance|certificate|fire|structural|land|lease|deed|building|occupancy|library|computer|disclosure|governance|record|report|document|noc/i.test(name)
-  if (file.type.startsWith('image/') && !institutionalName) return 'invalid' as const
-  return 'valid' as const
 }
 
 function createApplication(fileName: string, image: string | null, institution: string, institutionType: string, applicationId: string, category: string): Application {
@@ -39,8 +25,6 @@ function createApplication(fileName: string, image: string | null, institution: 
 
 export function ScanScreen({ onResult, existingApplications = [] }: { onResult: (app: Application) => void; existingApplications?: Application[] }) {
   const [stage, setStage] = useState<Stage>('intro')
-  const [validation, setValidation] = useState<ValidationState>(null)
-  const [validationStep, setValidationStep] = useState(0)
   const [status, setStatus] = useState<'idle' | 'running'>('idle')
   const [scanStep, setScanStep] = useState(0)
   const [file, setFile] = useState<File | null>(null)
@@ -55,15 +39,14 @@ export function ScanScreen({ onResult, existingApplications = [] }: { onResult: 
   const cameraRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (status !== 'running') return; const timers = [750, 1500, 2250].map((ms, i) => window.setTimeout(() => setScanStep(i + 1), ms)); const done = window.setTimeout(() => file && onResult(createApplication(file.name, image, institution, institutionType, applicationId, category)), 3000); return () => [...timers, done].forEach(clearTimeout) }, [status, file, image, institution, institutionType, applicationId, category, onResult])
-  useEffect(() => { if (validation !== 'checking') return; const timers = validationSteps.map((_, i) => window.setTimeout(() => setValidationStep(i + 1), (i + 1) * 350)); return () => timers.forEach(clearTimeout) }, [validation])
 
   const chooseExisting = (id: string) => { const app = existingApplications.find((item) => item.id === id); if (!app) return; setApplicationId(app.id); setInstitution(app.college); setInstitutionType(app.program.includes('Polytechnic') ? 'Polytechnic' : 'Engineering College') }
-  const beginValidation = async (next: File | undefined) => { if (!next) return; setFile(next); setImage(await readImage(next)); setValidationStep(0); setStage('validation'); setValidation('checking'); const outcome = classifyUpload(next); window.setTimeout(() => { if (outcome === 'invalid') setValidation('invalid'); else if (outcome === 'quality') setValidation('quality'); else if (outcome === 'uncertain') setValidation('uncertain'); else { setValidation('success'); window.setTimeout(() => { setValidation(null); setStage('verification'); setStatus('running'); setScanStep(0) }, 700) } }, 1500) }
+  const beginValidation = async (next: File | undefined) => { if (!next) return; setFile(next); setImage(await readImage(next)); setValidation(null); setStage('verification'); setStatus('running'); setScanStep(0) }
   const continueDetails = () => { if (!institution.trim() || !institutionType) { setError('Institution name and institution type are required.'); return } setError(''); setStage('upload') }
   const openPicker = (picker: HTMLInputElement | null) => picker?.click()
 
   return <div className="flex min-h-full flex-col"><ScreenHeader title="Scan a document" subtitle="Guided institutional submission" />
-    <div className="border-b border-border px-4 py-3"><div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">{['Introduction', 'Institution Details', 'Document Upload', 'Validation', 'Verification'].map((label, i) => <div key={label} className={i <= ['intro','details','upload','validation','verification'].indexOf(stage) ? 'text-primary' : ''}><div className="mx-auto mb-1 flex size-6 items-center justify-center rounded-full border border-current">{i + 1}</div><span className="hidden sm:inline">{label}</span></div>)}</div></div>
+    <div className="border-b border-border px-4 py-3"><div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">{['Introduction', 'Institution Details', 'Document Upload', 'Verification'].map((label, i) => <div key={label} className={i <= ['intro','details','upload','verification'].indexOf(stage) ? 'text-primary' : ''}><div className="mx-auto mb-1 flex size-6 items-center justify-center rounded-full border border-current">{i + 1}</div><span className="hidden sm:inline">{label}</span></div>)}</div></div>
     <div className="flex flex-1 flex-col gap-4 p-4">
       <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs font-medium text-primary">Demo Mode: AI Forensic Engine Active</div>
       {stage === 'details' && <section className="space-y-4"><div><h2 className="text-xl font-semibold">Institution Information</h2><p className="mt-1 text-sm text-muted-foreground">Provide your institution details to associate documents with the correct application.</p></div><div className="grid grid-cols-2 gap-2"><Button variant={mode === 'new' ? 'default' : 'outline'} onClick={() => setMode('new')}>New Application</Button><Button variant={mode === 'existing' ? 'default' : 'outline'} onClick={() => setMode('existing')}>Existing Application</Button></div>{mode === 'existing' && <select className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm" value={applicationId} onChange={(e) => chooseExisting(e.target.value)}><option value="">Select an existing application</option>{existingApplications.map((app) => <option key={app.id} value={app.id}>{app.id} — {app.college}</option>)}</select>}<label className="block text-sm font-medium">Institution Name<input className="mt-1 h-11 w-full rounded-lg border border-input bg-background px-3 text-sm" placeholder="Enter institution name" value={institution} onChange={(e) => setInstitution(e.target.value)} /></label><label className="block text-sm font-medium">AICTE Permanent ID / Application ID<input className="mt-1 h-11 w-full rounded-lg border border-input bg-background px-3 text-sm" placeholder="Enter AICTE Permanent ID or Application ID" value={applicationId} onChange={(e) => setApplicationId(e.target.value)} /></label><label className="block text-sm font-medium">Institution Type<select className="mt-1 h-11 w-full rounded-lg border border-input bg-background px-3 text-sm" value={institutionType} onChange={(e) => setInstitutionType(e.target.value)}><option value="">Select institution type</option>{types.map((item) => <option key={item}>{item}</option>)}</select></label>{error && <p className="text-sm text-destructive">{error}</p>}<div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={() => setStage('intro')}><ArrowLeft /> Back</Button><Button className="flex-1" onClick={continueDetails}>Continue</Button></div></section>}
@@ -71,6 +54,5 @@ export function ScanScreen({ onResult, existingApplications = [] }: { onResult: 
       {stage === 'verification' && <><div className="relative flex min-h-48 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-border bg-card p-5 text-center"><FileText className="size-10 text-primary" /><p className="max-w-[240px] truncate text-sm font-semibold">{file?.name}</p><p className="text-xs text-muted-foreground">Secure verification in progress</p></div><PipelineProgress activeStep={scanStep} /></>}
     </div>
     {stage === 'intro' && <div className="absolute inset-0 z-20 flex items-end bg-black/55 p-3 sm:items-center"><div className="w-full rounded-2xl border border-border bg-card p-5 shadow-2xl" role="dialog" aria-modal="true"><div className="mb-4 flex items-start justify-between"><div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Submission guidance</p><h2 className="mt-1 text-xl font-semibold">Welcome to ValidAI Document Verification</h2></div><button onClick={() => setStage('upload')} aria-label="Cancel"><X className="size-5 text-muted-foreground" /></button></div><p className="text-sm leading-relaxed text-muted-foreground">ValidAI helps institutions verify official documents for AICTE approval and regulatory compliance. Before proceeding, please ensure that you have relevant institutional documents ready for submission.</p><div className="my-4 rounded-xl bg-muted/50 p-3 text-sm"><p className="mb-2 font-semibold">Supported document categories</p><ul className="space-y-1 text-muted-foreground"><li>AICTE Approval Letters</li><li>Faculty Information and Records</li><li>Infrastructure and Facilities Records</li><li>Institutional Compliance Reports</li><li>Official Certificates and Supporting Documents</li></ul></div><p className="mb-5 text-xs text-muted-foreground">Random photographs, selfies, unrelated screenshots and irrelevant files may not be processed correctly.</p><div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={() => setStage('upload')}>Cancel</Button><Button className="flex-1" onClick={() => setStage('details')}>I Understand, Continue</Button></div></div></div>}
-    {validation && <div className="absolute inset-0 z-30 flex items-end bg-black/55 p-3 sm:items-center"><div className="w-full rounded-2xl border border-border bg-card p-5 shadow-2xl" role="dialog" aria-modal="true">{validation === 'checking' && <div className="py-3"><div className="mb-5 flex items-center gap-3"><Loader2 className="size-8 animate-spin text-primary" /><div><h2 className="font-semibold">Analyzing Uploaded Document...</h2><p className="text-xs text-muted-foreground">Pre-validation runs before the verification engine</p></div></div><div className="space-y-3">{validationSteps.map((label, i) => <div key={label} className="flex items-center gap-3 text-sm"><div className={`flex size-6 items-center justify-center rounded-full ${validationStep > i ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{validationStep > i ? <Check className="size-3" /> : i + 1}</div>{label}</div>)}</div></div>}{validation === 'success' && <div className="py-5 text-center"><Check className="mx-auto mb-3 size-12 text-emerald-500" /><h2 className="font-semibold">Document Recognized Successfully</h2><p className="mt-1 text-sm text-muted-foreground">Proceeding with the existing ValidAI verification engine.</p></div>}{(validation === 'invalid' || validation === 'quality' || validation === 'uncertain') && <><div className="flex gap-3"><AlertTriangle className="size-6 shrink-0 text-amber-500" /><div><h2 className="text-lg font-semibold">{validation === 'invalid' ? 'Invalid Document Detected' : validation === 'quality' ? 'Document Quality Issue' : 'Manual Review Required'}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{validation === 'invalid' ? 'This file does not appear to be an institutional compliance document. Please upload a relevant institutional document.' : validation === 'quality' ? 'We detected a possible institutional document, but its quality is insufficient for reliable processing. Please upload a clearer scan or photograph.' : 'The document type could not be confidently identified. Upload a clearer document or send it for manual review.'}</p></div></div><div className="mt-5 flex gap-2"><Button variant="outline" className="flex-1" onClick={() => { setValidation(null); setStage('upload') }}>Cancel</Button><Button className="flex-1" onClick={() => { setValidation(null); setFile(null); setImage(null); setStage('upload') }}>{validation === 'invalid' ? 'Upload Another Document' : 'Try Again'}</Button></div></>}</div></div>}
   </div>
 }

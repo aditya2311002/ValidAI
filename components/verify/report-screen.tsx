@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { summarize } from '@/lib/rules'
 import type { Application, AppStatus } from '@/lib/types'
-import { ElaView } from './ela-view'
 import { ScoreRing, ScreenHeader, SeverityDot, VerdictBadge, ruleTone, scoreColor } from './ui-bits'
 
 type Tab = 'summary' | 'ocr' | 'forensics' | 'rules'
@@ -202,13 +201,6 @@ export function ReportScreen({
               </div>
               <VerdictBadge verdict={doc.forensic.verdict} />
             </div>
-            <ElaView
-              src={doc.image}
-              alt={doc.name}
-              findings={doc.forensic.findings}
-              activeIndex={findingIndex}
-              onSelect={setFindingIndex}
-            />
             <ul className="flex flex-col gap-2">
               {doc.forensic.findings.map((f, i) => (
                 <li key={i}>
