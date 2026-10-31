@@ -1,119 +1,41 @@
 import type { DocumentResult, ExtractedFields, RuleResult } from './types'
 
-interface Rule {
+export type RuleCategory = 'Approval & Eligibility' | 'Land, Building & Safety' | 'Infrastructure & Facilities' | 'Faculty & Governance'
+
+export interface Rule {
   id: string
+  number: number
   title: string
-  clause: string
-  requirement: string
-  evaluate: (f: ExtractedFields, today: Date) => Pick<RuleResult, 'actual' | 'status'>
+  category: RuleCategory
+  description: string
+  why: string
+  reference: string
+  supportingDocument: string
+  applicability: string
+  condition: string
+  evaluate: (fields: ExtractedFields, today: Date) => Pick<RuleResult, 'actual' | 'status'>
 }
 
-const missing = { actual: 'Not found in submitted documents', status: 'missing' as const }
+const review = { actual: 'Insufficient evidence in submitted documents', status: 'missing' as const }
 
 export const RULEBOOK: Rule[] = [
-  {
-    id: 'land',
-    title: 'Minimum land area',
-    clause: 'APH Ch. 2 - Land',
-    requirement: 'At least 2.5 acres (metro / urban region)',
-    evaluate: (f) => {
-      if (f.landAreaAcres == null) return missing
-      return {
-        actual: `${f.landAreaAcres} acres`,
-        status: f.landAreaAcres >= 2.5 ? 'pass' : 'fail',
-      }
-    },
-  },
-  {
-    id: 'fsr',
-    title: 'Faculty : student ratio',
-    clause: 'APH Ch. 5 - Faculty',
-    requirement: '1:20 or better',
-    evaluate: (f) => {
-      if (!f.facultyCount || !f.studentIntake) return missing
-      const ratio = f.studentIntake / f.facultyCount
-      return {
-        actual: `1:${ratio.toFixed(1)} (${f.facultyCount} faculty / ${f.studentIntake} intake)`,
-        status: ratio <= 20 ? 'pass' : 'fail',
-      }
-    },
-  },
-  {
-    id: 'builtup',
-    title: 'Built-up area',
-    clause: 'APH Ch. 3 - Infrastructure',
-    requirement: 'At least 8,000 sq.m for intake up to 600',
-    evaluate: (f) => {
-      if (f.builtUpAreaSqm == null) return missing
-      return {
-        actual: `${f.builtUpAreaSqm.toLocaleString('en-IN')} sq.m`,
-        status: f.builtUpAreaSqm >= 8000 ? 'pass' : 'fail',
-      }
-    },
-  },
-  {
-    id: 'noc',
-    title: 'Valid fire safety NOC',
-    clause: 'APH Ch. 3 - Safety',
-    requirement: 'Must be valid on the date of verification',
-    evaluate: (f, today) => {
-      if (!f.nocValidUntil) return missing
-      const expiry = new Date(f.nocValidUntil)
-      if (Number.isNaN(expiry.getTime())) return { actual: f.nocValidUntil, status: 'fail' }
-      return {
-        actual: `Valid until ${expiry.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
-        status: expiry >= today ? 'pass' : 'fail',
-      }
-    },
-  },
-  {
-    id: 'principal',
-    title: 'Principal qualification',
-    clause: 'APH Ch. 5 - Faculty',
-    requirement: 'Principal must hold a PhD',
-    evaluate: (f) => {
-      if (f.principalPhd == null) return missing
-      return {
-        actual: f.principalPhd ? 'PhD holder' : 'No PhD on record',
-        status: f.principalPhd ? 'pass' : 'fail',
-      }
-    },
-  },
+  { id: 'approval', number: 1, title: 'Valid AICTE Approval', category: 'Approval & Eligibility', description: 'Checks for a valid Letter of Approval (LoA) or Extension of Approval (EoA), approval period and institution details.', why: 'Approval is the foundation for lawful technical education operations.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, approval process provisions', supportingDocument: 'AICTE LoA or EoA', applicability: 'All AICTE-approved institutions', condition: 'Approval document and period must be present and consistent.', evaluate: () => review },
+  { id: 'courses', number: 2, title: 'Approved Courses & Intake', category: 'Approval & Eligibility', description: 'Compares listed programmes and approved student intake with the AICTE approval document.', why: 'Institutions may not offer courses or intake beyond approval.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, approved courses and intake provisions', supportingDocument: 'AICTE approval letter and sanctioned intake statement', applicability: 'Programme and level specific', condition: 'Every course and intake figure must be traceable to the approval.', evaluate: () => review },
+  { id: 'land-ownership', number: 3, title: 'Land Ownership / Lease', category: 'Land, Building & Safety', description: 'Verifies ownership or applicable lease documents, including the handbook’s 30-year minimum where that condition applies.', why: 'The institution must demonstrate lawful control of its premises.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, land requirements', supportingDocument: 'Registered title deed or applicable lease deed', applicability: 'Context dependent on institution and location', condition: 'Landholder, institution and applicable lease duration must be consistent.', evaluate: () => review },
+  { id: 'land-fsi', number: 4, title: 'Land & FSI/FAR Compliance', category: 'Land, Building & Safety', description: 'Checks whether available land supports the required built-up area under prevailing local FSI/FAR norms.', why: 'Local planning controls determine permissible development capacity.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, land and local authority provisions', supportingDocument: 'Land record, local FSI/FAR statement and authority approval', applicability: 'Location and competent-authority specific', condition: 'Do not apply a universal acreage threshold; verify the applicable local norm.', evaluate: () => review },
+  { id: 'land-use', number: 5, title: 'Land Use & Approved Building Plan', category: 'Land, Building & Safety', description: 'Checks Land Use/Conversion/Classification Certificate and the approved building plan.', why: 'Approved land use and plans establish that the campus is legally permitted.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, land use and building approval provisions', supportingDocument: 'Land use certificate and approved building plan', applicability: 'All campuses, subject to local authority process', condition: 'Use classification and plan details must match the institution and site.', evaluate: () => review },
+  { id: 'occupancy', number: 6, title: 'Occupancy / Completion Certificate', category: 'Land, Building & Safety', description: 'Checks the applicable Occupancy Certificate, Completion Certificate or Building Licence.', why: 'The building must be authorized for occupation and educational use.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, building completion provisions', supportingDocument: 'Occupancy, completion certificate or building licence', applicability: 'As applicable to the building and authority', condition: 'Issuing authority and document details must be verifiable.', evaluate: () => review },
+  { id: 'fire', number: 7, title: 'Fire & Life Safety', category: 'Land, Building & Safety', description: 'Verifies a Fire Safety Certificate from the competent authority and its validity on the verification date.', why: 'Life safety is a non-negotiable condition for an operating campus.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, fire and life safety provisions', supportingDocument: 'Fire Safety Certificate / NOC', applicability: 'All applicable institutional buildings', condition: 'Certificate must be present, issued by the competent authority and valid today.', evaluate: (f, today) => { if (!f.nocValidUntil) return review; const expiry = new Date(f.nocValidUntil); if (Number.isNaN(expiry.getTime())) return { actual: f.nocValidUntil, status: 'fail' }; return { actual: `Valid until ${expiry.toLocaleDateString('en-IN')}`, status: expiry >= today ? 'pass' : 'fail' } } },
+  { id: 'structural', number: 8, title: 'Structural Stability', category: 'Land, Building & Safety', description: 'Checks applicable Structural Stability and Safe Foundation Certificates, including additional-construction and building-age conditions.', why: 'Structural evidence protects occupants while respecting when the handbook makes it applicable.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, structural stability provisions', supportingDocument: 'Structural Stability and Safe Foundation Certificate, where applicable', applicability: 'Conditional on construction, additions and building-age provisions', condition: 'Do not demand this certificate unconditionally; establish applicability first.', evaluate: () => review },
+  { id: 'built-up', number: 9, title: 'Built-up Area Compliance', category: 'Infrastructure & Facilities', description: 'Verifies instructional, administrative, amenities and circulation areas against applicable Annexure 3 requirements.', why: 'Space requirements depend on the educational context rather than one universal area.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, Annexure 3', supportingDocument: 'Approved area statement and building plan', applicability: 'Programme, level, duration and approved-intake specific', condition: 'Compare extracted areas with the applicable Annexure 3 schedule; no universal 8,000 sq. m. rule.', evaluate: (f) => f.builtUpAreaSqm == null ? review : { actual: `${f.builtUpAreaSqm.toLocaleString('en-IN')} sq. m (applicable schedule not supplied)`, status: 'missing' } },
+  { id: 'labs', number: 10, title: 'Classrooms & Laboratory Facilities', category: 'Infrastructure & Facilities', description: 'Checks classrooms, laboratories and instructional facilities against programme-specific requirements.', why: 'Students need the facilities promised for the approved programme.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, infrastructure provisions', supportingDocument: 'Infrastructure, laboratory and equipment records', applicability: 'Programme and intake specific', condition: 'Facility evidence must map to the approved programme and intake.', evaluate: () => review },
+  { id: 'library', number: 11, title: 'Library Facilities', category: 'Infrastructure & Facilities', description: 'Checks books, journals and other applicable library facilities against Annexure 4.', why: 'Library resources support teaching, learning and research.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, Annexure 4', supportingDocument: 'Library stock, subscription and facility records', applicability: 'Programme and level specific', condition: 'Evidence must be sufficient for the relevant Annexure 4 requirements.', evaluate: () => review },
+  { id: 'computers', number: 12, title: 'Computers, Software & Internet', category: 'Infrastructure & Facilities', description: 'Checks computers, programme-specific student-to-computer ratio, software and internet facilities.', why: 'Digital capacity must support the approved curriculum.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, Annexure 4', supportingDocument: 'Computer inventory, software licences and internet records', applicability: 'Programme and level specific', condition: 'Use the applicable Annexure 4 schedule; do not apply one ratio universally.', evaluate: () => review },
+  { id: 'faculty-ratio', number: 13, title: 'Faculty–Student & Cadre Ratio', category: 'Faculty & Governance', description: 'Verifies faculty strength and ratio using relevant programme-specific AICTE faculty and cadre norms.', why: 'Adequate faculty capacity is essential for approved intake and quality.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, faculty provisions', supportingDocument: 'Faculty roster, workload and approved intake records', applicability: 'Programme, level and approved-intake specific', condition: 'Apply the relevant norm; 1:20 is not universal.', evaluate: (f) => f.facultyCount && f.studentIntake ? { actual: `${f.facultyCount} faculty for ${f.studentIntake} intake (programme norm not supplied)`, status: 'missing' } : review },
+  { id: 'faculty-qualifications', number: 14, title: 'Faculty Qualifications', category: 'Faculty & Governance', description: 'Checks qualifications and cadre requirements, including the conditional PG-course Professor/Associate Professor with PhD provision.', why: 'Qualified faculty are required for the academic level being offered.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, faculty qualification provisions', supportingDocument: 'Faculty qualification certificates and appointment records', applicability: 'Programme and level specific; PG condition applies where relevant', condition: 'Do not treat a PhD-qualified Principal as a universal requirement.', evaluate: () => review },
+  { id: 'governance', number: 15, title: 'Institutional Governance & Mandatory Disclosures', category: 'Faculty & Governance', description: 'Checks governance records, grievance redressal, Internal Committee, Equal Opportunity Facilitation Cell and applicable Annexure 18 disclosures.', why: 'Transparent governance protects students, staff and public accountability.', reference: 'AICTE Approval Process Handbook 2024–25 to 2026–27, Annexure 18', supportingDocument: 'Governance policies, committee records and mandatory disclosure pages', applicability: 'All applicable institutions and disclosures', condition: 'Evidence must cover the applicable governance mechanisms and disclosures.', evaluate: () => review },
 ]
 
-export function mergeFields(docs: DocumentResult[]): ExtractedFields {
-  return docs.reduce<ExtractedFields>((acc, doc) => {
-    for (const [key, value] of Object.entries(doc.fields)) {
-      if (value != null) (acc as Record<string, unknown>)[key] = value
-    }
-    return acc
-  }, {})
-}
-
-export function evaluateCompliance(docs: DocumentResult[], today = new Date()): RuleResult[] {
-  const fields = mergeFields(docs)
-  return RULEBOOK.map((rule) => ({
-    id: rule.id,
-    title: rule.title,
-    clause: rule.clause,
-    requirement: rule.requirement,
-    ...rule.evaluate(fields, today),
-  }))
-}
-
-export function summarize(docs: DocumentResult[]) {
-  const rules = evaluateCompliance(docs)
-  const passed = rules.filter((r) => r.status === 'pass').length
-  const failed = rules.filter((r) => r.status === 'fail').length
-  const missingCount = rules.filter((r) => r.status === 'missing').length
-  const forensicScore = docs.length
-    ? Math.round(docs.reduce((s, d) => s + d.forensic.score, 0) / docs.length)
-    : 0
-  const tamperedDocs = docs.filter((d) => d.forensic.verdict !== 'authentic').length
-  const complianceScore = Math.round((passed / rules.length) * 100)
-  const overall = Math.round(complianceScore * 0.5 + forensicScore * 0.5)
-  let recommendation: 'approve' | 'query' | 'reject' = 'approve'
-  if (failed > 0 || docs.some((d) => d.forensic.verdict === 'tampered')) recommendation = 'reject'
-  else if (missingCount > 0 || tamperedDocs > 0) recommendation = 'query'
-  return { rules, passed, failed, missingCount, forensicScore, tamperedDocs, complianceScore, overall, recommendation }
-}
+export function mergeFields(docs: DocumentResult[]): ExtractedFields { return docs.reduce<ExtractedFields>((acc, doc) => { for (const [key, value] of Object.entries(doc.fields)) if (value != null) (acc as Record<string, unknown>)[key] = value; return acc }, {}) }
+export function evaluateCompliance(docs: DocumentResult[], today = new Date()): RuleResult[] { const fields = mergeFields(docs); return RULEBOOK.map((rule) => ({ id: rule.id, title: rule.title, clause: rule.reference, requirement: rule.condition, ...rule.evaluate(fields, today) })) }
+export function summarize(docs: DocumentResult[]) { const rules = evaluateCompliance(docs); const passed = rules.filter((r) => r.status === 'pass').length; const failed = rules.filter((r) => r.status === 'fail').length; const missingCount = rules.filter((r) => r.status === 'missing').length; const forensicScore = docs.length ? Math.round(docs.reduce((s, d) => s + d.forensic.score, 0) / docs.length) : 0; const tamperedDocs = docs.filter((d) => d.forensic.verdict !== 'authentic').length; const complianceScore = Math.round((passed / rules.length) * 100); const overall = Math.round(complianceScore * 0.5 + forensicScore * 0.5); let recommendation: 'approve' | 'query' | 'reject' = 'approve'; if (failed > 0 || docs.some((d) => d.forensic.verdict === 'tampered')) recommendation = 'reject'; else if (missingCount > 0 || tamperedDocs > 0) recommendation = 'query'; return { rules, passed, failed, missingCount, forensicScore, tamperedDocs, complianceScore, overall, recommendation } }

@@ -1,30 +1,14 @@
-import { BookOpen } from 'lucide-react'
-import { RULEBOOK } from '@/lib/rules'
+'use client'
+
+import { useState } from 'react'
+import { BookOpen, ChevronDown, FileCheck2 } from 'lucide-react'
+import { RULEBOOK, type RuleCategory } from '@/lib/rules'
 import { ScreenHeader } from './ui-bits'
 
+const categories: RuleCategory[] = ['Approval & Eligibility', 'Land, Building & Safety', 'Infrastructure & Facilities', 'Faculty & Governance']
+
 export function RulebookScreen() {
-  return (
-    <div className="flex flex-col">
-      <ScreenHeader title="AICTE rulebook" subtitle="Norms the AI checks every application against" />
-      <div className="flex flex-col gap-3 p-4">
-        <p className="rounded-xl bg-secondary p-3 text-xs leading-relaxed text-secondary-foreground">
-          Prototype rule set modelled on the AICTE Approval Process Handbook (APH). Thresholds are illustrative and can be updated each academic year.
-        </p>
-        <ul className="flex flex-col gap-2">
-          {RULEBOOK.map((r) => (
-            <li key={r.id} className="flex gap-3 rounded-xl border border-border bg-card p-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
-                <BookOpen className="size-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{r.title}</p>
-                <p className="text-xs text-muted-foreground">{r.requirement}</p>
-                <p className="mt-1 text-[11px] font-medium text-primary">{r.clause}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  )
+  const [selected, setSelected] = useState<string | null>(null)
+  const selectedRule = RULEBOOK.find((rule) => rule.id === selected)
+  return <div className="flex flex-col"><ScreenHeader title="AICTE rulebook" subtitle="15 context-aware checks from the Approval Process Handbook" /><div className="flex flex-col gap-3 p-4"><p className="rounded-xl bg-secondary p-3 text-xs leading-relaxed text-secondary-foreground">Rules are evaluated against available evidence. Missing or insufficient evidence is shown as Needs Review; passing classification never means a document is authentic.</p>{categories.map((category) => <section key={category}><h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{category}</h2><div className="flex flex-col gap-2">{RULEBOOK.filter((rule) => rule.category === category).map((rule) => <button key={rule.id} type="button" onClick={() => setSelected(selected === rule.id ? null : rule.id)} className="w-full rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/40"><div className="flex items-start gap-3"><div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary"><BookOpen className="size-4" /></div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><p className="text-sm font-medium">Rule {rule.number}: {rule.title}</p><ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${selected === rule.id ? 'rotate-180' : ''}`} /></div><p className="mt-1 text-xs text-muted-foreground">{rule.description}</p><p className="mt-1 text-[11px] font-medium text-primary">{rule.reference}</p></div></div>{selected === rule.id && <div className="mt-3 grid gap-2 border-t border-border pt-3 text-xs sm:grid-cols-2"><div><p className="font-semibold">What it checks</p><p className="mt-1 text-muted-foreground">{rule.condition}</p></div><div><p className="font-semibold">Why it matters</p><p className="mt-1 text-muted-foreground">{rule.why}</p></div><div><p className="font-semibold">Supporting document</p><p className="mt-1 flex gap-1 text-muted-foreground"><FileCheck2 className="size-3.5 text-primary" />{rule.supportingDocument}</p></div><div><p className="font-semibold">Applicability</p><p className="mt-1 text-muted-foreground">{rule.applicability}</p></div><div className="sm:col-span-2"><p className="font-semibold">Current evidence</p><p className="mt-1 text-muted-foreground">No document-specific evidence selected. Status: <span className="font-medium text-amber-600">Needs Review</span>.</p></div></div>}</button>)}</div></section>)}</div></div>
 }
