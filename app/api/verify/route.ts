@@ -78,16 +78,6 @@ export async function POST(req: Request) {
     return Response.json(output)
   } catch (error) {
     console.error('[verify] AI verification failed', error)
-    const message = error instanceof Error ? error.message : ''
-    if (message.includes('credit card')) {
-      return Response.json(
-        {
-          error:
-            'Live AI scanning needs AI Gateway enabled: add a credit card in your Vercel team AI settings to unlock free credits. The sample applications in the queue work without it.',
-        },
-        { status: 503 },
-      )
-    }
-    return Response.json({ error: 'AI verification failed. Please try again.' }, { status: 500 })
+    return Response.json({ error: 'Demo verification could not complete.' }, { status: 500 })
   }
 }

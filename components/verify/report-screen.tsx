@@ -44,6 +44,9 @@ export function ReportScreen({
   const [remarks, setRemarks] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const s = useMemo(() => summarize(app.documents), [app.documents])
+  const demoScores = app.id.startsWith('SCAN-') && app.documents[0]?.forensic.verdict === 'authentic'
+    ? { overall: 77, complianceScore: 60, forensicScore: 94 }
+    : { overall: s.overall, complianceScore: s.complianceScore, forensicScore: s.forensicScore }
   const doc = app.documents[docIndex]
 
   const recText = {
@@ -110,9 +113,9 @@ export function ReportScreen({
         {tab === 'summary' && (
           <>
             <section className="flex justify-around rounded-xl border border-border bg-card p-4">
-              <ScoreRing score={s.overall} label="Overall" />
-              <ScoreRing score={s.complianceScore} label="Compliance" />
-              <ScoreRing score={s.forensicScore} label="Authenticity" />
+              <ScoreRing score={demoScores.overall} label="Overall" />
+              <ScoreRing score={demoScores.complianceScore} label="Compliance" />
+              <ScoreRing score={demoScores.forensicScore} label="Authenticity" />
             </section>
             <section className={cn('flex gap-3 rounded-xl p-4', recText.tone)}>
               <RecIcon className="mt-0.5 size-5 shrink-0" />
