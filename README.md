@@ -15,7 +15,7 @@
 ##  Live Demo & Presentation
 * **Live Web App:** [https://blueprint-seven-olive.vercel.app](https://blueprint-seven-olive.vercel.app)
 * **Presentation Deck (PPT):** Included in repository root (`/docs/presentation.pptx`)
-* **Demo Video:**
+* **Demo Video:** [YouTube](https://youtube.com/shorts/8qNrKYLejiw?si=1nOkUHS0csL-ERFu)
 
 ---
 
